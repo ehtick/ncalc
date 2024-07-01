@@ -15,6 +15,7 @@ NCalc is a mathematical expression evaluator in .NET. NCalc can parse any expres
 ## Docs
 Need help or want to learn more? [Check our docs.](https://ncalc.github.io/ncalc)
 
+
 ## Project Description
 
 NCalc is a .NET library for evaluating mathematical expressions. It can handle various types of expressions, including those with static or dynamic parameters, as well as custom functions.
@@ -26,8 +27,23 @@ For additional information on the technique we used to create this framework ple
 > If you need help, please open an issue and include the expression to help us better understand the problem. 
 > Providing this information will aid in resolving the issue effectively.
 
+## Getting Started
+If you want to evaluate simple expressions:
+```
+dotnet add package NCalcSync 
+```
+Want `async` support at your functions and parameters?
+```
+dotnet add package NCalcAsync 
+```
+Dependency Injection? We got you covered:
+```
+dotnet add package NCalc.DependencyInjection
+```
+
 ## Functionalities
-**Simple Expressions**
+
+### Simple Expressions
 
 ```c#
 var expression = new Expression("2 + 3 * 5");
@@ -56,11 +72,9 @@ Debug.Assert(0 == new Expression("Tan(0)").Evaluate());
 
 ```c#
 var expression = new Expression("SecretOperation(3, 6)");
-expression.EvaluateFunction += delegate(string name, FunctionArgs args)
-    {
-        if (name == "SecretOperation")
-            args.Result = (int)args.Parameters[0].Evaluate() + (int)args.Parameters[1].Evaluate();
-    };
+expression.Functions["SecretOperation"] = (args) => {
+    return (int)args[0].Evaluate() + (int)args[1].Evaluate();
+};
 
 Debug.Assert(9 == expression.Evaluate());
 ```
@@ -82,16 +96,15 @@ var expression = new Expression("Round(Pow([Pi], 2) + Pow([Pi2], 2) + [X], 2)");
 expression.Parameters["Pi2"] = new Expression("Pi * [Pi]");
 expression.Parameters["X"] = 10;
 
-expression.EvaluateParameter += delegate(string name, ParameterArgs args)
-  {
-    if (name == "Pi")
-    args.Result = 3.14;
-  };
+expression.DynamicParameters["Pi"] = _ => {
+    Console.WriteLine("I'm evaluating π!");
+    return 3.14;
+};
 
 Debug.Assert(117.07 == expression.Evaluate());
 ```
 
-**Caching in a distributed cache**
+**Caching and Serializing**
 
 This example uses [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json/).
 
@@ -120,6 +133,7 @@ expression.Parameters = new Dictionary<string, object> {
 
 var result = expression.Evaluate();
 ```
+You can also use our [Memory Cache plugin.](https://ncalc.github.io/ncalc/articles/plugins/memory_cache.html)
 
 **Lambda Expressions**
 ```cs
@@ -128,11 +142,8 @@ Func<int> function = expression.ToLambda<int>();
 Debug.Assert(function()); //3
 ```
 
+
 ## Related projects
-
-### [NCalc-Async](https://github.com/ncalc/ncalc-async/)
-
-Pure asynchronous implementation of NCalc by [Peter Liljenberg](https://github.com/petli).
 
 ### [Parlot](https://github.com/sebastienros/parlot)
 
@@ -146,12 +157,12 @@ Developed by David, Dan and all at [Panoramic Data](https://github.com/panoramic
 
 ### [Jint](https://github.com/sebastienros/jint)
 
-Javascript Interpreter for .NET by [Sébastien Ros](https://github.com/sebastienros), the author of NCalc library.  
+JavaScript Interpreter for .NET by [Sébastien Ros](https://github.com/sebastienros), the author of NCalc library.  
 Runs on any modern .NET platform as it supports .NET Standard 2.0 and .NET 4.6.1 targets (and up).
 
 ### [NCalcJS](https://github.com/thomashambach/ncalcjs)
 
-A Typescript/Javascript port of NCalc.
+A TypeScript/JavaScript port of NCalc.
 
 ### [NCalc101](https://ncalc101.magicsuite.net)
 
@@ -159,7 +170,7 @@ NCalc 101 is a simple web application that allows you to try out the NCalc expre
 
 ### [JJMasterData.NCalc](https://md.jjconsulting.tech/articles/plugins/ncalc.html)
 
-Plugin of NCalc to [JJMasterData](https://github.com/jjconsulting/jjmasterdata), a runtime form generator from database metadata.
+Plugin of NCalc used to evaluate [JJMasterData](https://github.com/jjconsulting/jjmasterdata) expressions. JJMasterData is a runtime form generator from database metadata.
 
 # NCalc versioning
 

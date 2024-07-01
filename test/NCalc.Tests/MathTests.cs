@@ -1,47 +1,15 @@
 using System.Globalization;
+using NCalc.Tests.TestData;
 using Assert = Xunit.Assert;
 
 namespace NCalc.Tests;
 
-[Trait("Category","Math")]
+[Trait("Category", "Math")]
 public class MathsTests
 {
-    public static TheoryData<string, object, double?> GetBuiltInFunctionTestData()
-    {
-        var data = new TheoryData<string, object, double?>
-        {
-            { "Abs(-1)", 1d, null },
-            { "Acos(1)", 0d, null },
-            { "Asin(0)", 0d, null },
-            { "Atan(0)", 0d, null },
-            { "Ceiling(1.5)", 2d, null },
-            { "Cos(0)", 1d, null },
-            { "Exp(0)", 1d, null },
-            { "Floor(1.5)", 1d, null },
-            { "IEEERemainder(3,2)", -1d, null },
-            { "Log(1,10)", 0d, null },
-            { "Ln(1)", 0d, null },
-            { "Log10(1)", 0d, null },
-            { "Pow(3,2)", 9d, null },
-            { "Round(3.222,2)", 3.22d, null },
-            { "Sign(-10)", -1, null },
-            { "Sin(0)", 0d, null },
-            { "Sqrt(4)", 2d, null },
-            { "Tan(0)", 0d, null },
-            { "Truncate(1.7)", 1d, null },
-            { "Atan2(-1,0)", -Math.PI/2, 1e-16 },
-            { "Atan2(1,0)", Math.PI/2, 1e-16 },
-            { "Atan2(0,-1)", Math.PI, 1e-16 },
-            { "Atan2(0,1)", 0d, 1e-16 },
-            { "Max(1,10)", 10, null },
-            { "Min(1,10)", 1, null }
-        };
-
-        return data;
-    }
 
     [Theory]
-    [MemberData(nameof(GetBuiltInFunctionTestData))]
+    [ClassData(typeof(BuiltInFunctionsTestData))]
     public void BuiltInFunctions_Test(string expression, object expected, double? tolerance)
     {
         var result = new Expression(expression).Evaluate();
@@ -55,15 +23,15 @@ public class MathsTests
             Assert.Equal(expected, result);
         }
     }
-    
+
     [Fact]
     public void Should_Modulo_All_Numeric_Types_Issue_58()
     {
         // https://github.com/ncalc/ncalc/issues/58
-        var expectedResult = 0;
-        var operand = "%";
-        var lhsValue = 50;
-        var rhsValue = 50;
+        const int expectedResult = 0;
+        const string operand = "%";
+        const int lhsValue = 50;
+        const int rhsValue = 50;
 
         var allTypes = new List<TypeCode>()
         {
@@ -83,9 +51,9 @@ public class MathsTests
             [TypeCode.UInt32] = [TypeCode.Boolean],
             [TypeCode.Int64] = [TypeCode.Boolean, TypeCode.UInt64],
             [TypeCode.UInt64] = [TypeCode.Boolean, TypeCode.SByte, TypeCode.Int16, TypeCode.Int32, TypeCode.Int64],
-            [TypeCode.Single] = [TypeCode.Boolean, TypeCode.Decimal],
-            [TypeCode.Double] = [TypeCode.Boolean, TypeCode.Decimal],
-            [TypeCode.Decimal] = [TypeCode.Boolean, TypeCode.Single, TypeCode.Double]
+            [TypeCode.Single] = [TypeCode.Boolean],
+            [TypeCode.Double] = [TypeCode.Boolean],
+            [TypeCode.Decimal] = [TypeCode.Boolean]
         };
 
         // These should all work and return a value
@@ -94,17 +62,17 @@ public class MathsTests
             var toTest = allTypes.Except(shouldNotWork[typecodeA]);
             foreach (var typecodeB in toTest)
             {
-                var expr = $"x {operand} y";
+                const string expr = $"x {operand} y";
                 try
                 {
                     var result = new Expression(expr, CultureInfo.InvariantCulture)
-                        {
-                            Parameters =
+                    {
+                        Parameters =
                             {
                                 ["x"] = Convert.ChangeType(lhsValue, typecodeA),
                                 ["y"] = Convert.ChangeType(rhsValue, typecodeB)
                             }
-                        }
+                    }
                         .Evaluate();
                     Assert.True(Convert.ToInt64(result) == expectedResult,
                         $"{expr}: {typecodeA} = {lhsValue}, {typecodeB} = {rhsValue} should return {expectedResult}");
@@ -118,21 +86,21 @@ public class MathsTests
             // These should throw exceptions
             foreach (var typecodeB in shouldNotWork[typecodeA])
             {
-                var expr = $"x {operand} y";
+                const string expr = $"x {operand} y";
                 Assert.Throws<InvalidOperationException>(() => new Expression(expr, CultureInfo.InvariantCulture)
-                        {
-                            Parameters =
+                {
+                    Parameters =
                             {
                                 ["x"] = Convert.ChangeType(lhsValue, typecodeA),
                                 ["y"] = Convert.ChangeType(rhsValue, typecodeB)
                             }
-                        }
+                }
                         .Evaluate());
             }
         }
     }
 
-    
+
     [Fact]
     public void Should_Add_All_Numeric_Types_Issue_58()
     {
@@ -171,17 +139,17 @@ public class MathsTests
             var toTest = allTypes.Except(shouldNotWork[typecodeA]);
             foreach (var typecodeB in toTest)
             {
-                var expr = $"x {operand} y";
+                const string expr = $"x {operand} y";
                 try
                 {
                     var result = new Expression(expr, CultureInfo.InvariantCulture)
-                        {
-                            Parameters =
+                    {
+                        Parameters =
                             {
                                 ["x"] = Convert.ChangeType(lhsValue, typecodeA),
                                 ["y"] = Convert.ChangeType(rhsValue, typecodeB)
-                            } 
-                        }
+                            }
+                    }
                         .Evaluate();
                     Assert.True(Convert.ToInt64(result) == expectedResult,
                         $"{expr}: {typecodeA} = {lhsValue}, {typecodeB} = {rhsValue} should return {expectedResult}");
@@ -198,18 +166,18 @@ public class MathsTests
             {
                 const string expr = $"x {operand} y";
                 Assert.Throws<InvalidOperationException>(() => new Expression(expr, CultureInfo.InvariantCulture)
-                        {
-                            Parameters =
+                {
+                    Parameters =
                             {
                                 ["x"] = Convert.ChangeType(1, typecodeA),
                                 ["y"] = Convert.ChangeType(1, typecodeB)
                             }
-                        }
+                }
                         .Evaluate());
             }
         }
     }
-    
+
     [Fact]
     public void Should_Subtract_All_Numeric_Types_Issue_58()
     {
@@ -237,7 +205,7 @@ public class MathsTests
             [TypeCode.UInt32] = [TypeCode.Boolean],
             [TypeCode.Int64] = [TypeCode.Boolean, TypeCode.UInt64],
             [TypeCode.UInt64] = [TypeCode.Boolean, TypeCode.SByte, TypeCode.Int16, TypeCode.Int32, TypeCode.Int64],
-            [TypeCode.Single] = [TypeCode.Boolean, TypeCode.Decimal],
+            [TypeCode.Single] = [TypeCode.Boolean],
             [TypeCode.Double] = [TypeCode.Boolean],
             [TypeCode.Decimal] = [TypeCode.Boolean]
         };
@@ -248,17 +216,17 @@ public class MathsTests
             var toTest = allTypes.Except(shouldNotWork[typecodeA]);
             foreach (var typecodeB in toTest)
             {
-                var expr = $"x {operand} y";
+                const string expr = $"x {operand} y";
                 try
                 {
                     var result = new Expression(expr, CultureInfo.InvariantCulture)
-                        {
-                            Parameters =
+                    {
+                        Parameters =
                             {
                                 ["x"] = Convert.ChangeType(lhsValue, typecodeA),
                                 ["y"] = Convert.ChangeType(rhsValue, typecodeB)
                             }
-                        }
+                    }
                         .Evaluate();
                     Assert.True(Convert.ToInt64(result) == expectedResult,
                         $"{expr}: {typecodeA} = {lhsValue}, {typecodeB} = {rhsValue} should return {expectedResult}");
@@ -273,20 +241,19 @@ public class MathsTests
 
             foreach (var typecodeB in shouldNotWork[typecodeA])
             {
-                var expr = $"x {operand} y";
+                const string expr = $"x {operand} y";
                 Assert.Throws<InvalidOperationException>(() => new Expression(expr, CultureInfo.InvariantCulture)
+                {
+                    Parameters =
                         {
-                            Parameters =
-                            {
                                 ["x"] = Convert.ChangeType(lhsValue, typecodeA),
                                 ["y"] = Convert.ChangeType(rhsValue, typecodeB)
-                            }
                         }
-                        .Evaluate());
+                }.Evaluate());
             }
         }
     }
-    
+
     [Fact]
     public void IncorrectCalculation_NCalcAsync_Issue_4()
     {
@@ -296,7 +263,7 @@ public class MathsTests
         Assert.IsType<double>(evalutedResult);
         Assert.Equal(4.65, (double)evalutedResult, 3);
     }
-    
+
     [Theory]
     [InlineData("1.22e1", 12.2d)]
     [InlineData("1e2", 100d)]
@@ -308,7 +275,7 @@ public class MathsTests
     {
         Assert.Equal(expected, new Expression(expression).Evaluate());
     }
-    
+
     [Fact]
     public void ShouldHandleLongValues()
     {
@@ -320,7 +287,7 @@ public class MathsTests
     {
         Assert.Equal(false, new Expression("(0=1500000)||(((0+2200000000)-1500000)<0)").Evaluate());
     }
-    
+
     [Fact]
     public void ShouldNotConvertRealTypes()
     {
@@ -341,15 +308,15 @@ public class MathsTests
         e.Parameters["b"] = 20M;
         Assert.Equal(100M, e.Evaluate());
     }
-    
+
     [Fact]
     public void Overflow_Issue_190()
     {
         const decimal minValue = decimal.MinValue;
         var expr = new Expression(minValue.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
-        Assert.Equal(minValue,expr.Evaluate());
+        Assert.Equal(minValue, expr.Evaluate());
     }
-    
+
     [Theory]
     [InlineData("(X1 = 1)/2", 0.5)]
     [InlineData("(X1 = 1)*2", 2)]
@@ -369,10 +336,10 @@ public class MathsTests
 
 
         var lambda = expression.ToLambda<double>();
-        
+
         Assert.Equal(Convert.ToDouble(expectedValue), lambda());
     }
-    
+
     [Fact]
     public void Should_Evaluate_Floor_Of_Double_Max_Value()
     {
@@ -389,9 +356,77 @@ public class MathsTests
     [Fact]
     public void Should_Not_Change_Double_Precision()
     {
-        var expr = new Expression($"Floor(12e+100)");
+        var expr = new Expression("Floor(12e+100)");
         var res = expr.Evaluate();
 
         Assert.Equal(Math.Floor(12e+100), res);
+    }
+
+    [Theory]
+    [InlineData(".05", 0.05)]
+    [InlineData("0.05", 0.05)]
+    [InlineData("0.005", 0.005)]
+    [InlineData(".0", 0d)]
+    public void Should_Correctly_Parse_Floating_Point_Numbers(string formula, object expectedValue)
+    {
+        var expr = new Expression(formula, CultureInfo.InvariantCulture);
+        var res = expr.Evaluate();
+
+        Assert.Equal(expectedValue, res);
+    }
+
+    [Theory]
+    [InlineData("131055 ^ 8", 131047ul)]
+    [InlineData("524288 | 128", 524416ul)]
+    [InlineData("262143 & 131055", 131055ul)]
+    [InlineData("262143 << 2", 1048572ul)]
+    [InlineData("262143 >> 2", 65535ul)]
+    public void Should_Not_Overflow_Bitwise(string formula, object expectedValue)
+    {
+        var e = new Expression(formula, CultureInfo.InvariantCulture);
+        var res = e.Evaluate();
+
+        Assert.Equal(expectedValue, res);
+    }
+
+    [Theory]
+    [InlineData(int.MaxValue, '+', int.MaxValue)]
+    [InlineData(int.MinValue, '-', int.MaxValue)]
+    [InlineData(int.MaxValue, '*', int.MaxValue)]
+    public void Should_Handle_Overflow_Int(int a, char op, int b)
+    {
+        var e = new Expression($"[a] {op} [b]", ExpressionOptions.OverflowProtection, CultureInfo.InvariantCulture);
+        e.Parameters["a"] = a;
+        e.Parameters["b"] = b;
+
+        Assert.Throws<OverflowException>(() => e.Evaluate());
+    }
+
+    [Theory]
+    [InlineData(double.MaxValue, '+', double.MaxValue)]
+    [InlineData(double.MinValue, '-', double.MaxValue)]
+    [InlineData(double.MaxValue, '*', double.MaxValue)]
+    [InlineData(double.MinValue, '/', 0.001d)]
+    public void Should_Handle_Overflow_Double(double a, char op, double b)
+    {
+        var e = new Expression($"[a] {op} [b]", ExpressionOptions.OverflowProtection, CultureInfo.InvariantCulture);
+        e.Parameters["a"] = a;
+        e.Parameters["b"] = b;
+        
+        Assert.Throws<OverflowException>(() => e.Evaluate());
+    }
+
+    [Theory]
+    [InlineData(float.MaxValue, '+', float.MaxValue)]
+    [InlineData(float.MinValue, '-', float.MaxValue)]
+    [InlineData(float.MaxValue, '*', float.MaxValue)]
+    [InlineData(float.MinValue, '/', 0.001f)]
+    public void Should_Handle_Overflow_Float(float a, char op, float b)
+    {
+        var e = new Expression($"[a] {op} [b]", ExpressionOptions.OverflowProtection, CultureInfo.InvariantCulture);
+        e.Parameters["a"] = a;
+        e.Parameters["b"] = b;
+
+        Assert.Throws<OverflowException>(() => e.Evaluate());
     }
 }

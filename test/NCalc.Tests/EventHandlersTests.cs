@@ -1,12 +1,11 @@
 using System.Collections;
-
 using NCalc.Handlers;
 
 namespace NCalc.Tests;
 
 using Xunit;
 
-[Trait("Category","Event Handlers")]
+[Trait("Category", "Event Handlers")]
 public class EventHandlersTests
 {
     [Fact]
@@ -55,7 +54,7 @@ public class EventHandlersTests
 
         Assert.Equal(117.07, e.Evaluate());
     }
-    
+
     [Fact]
     public void Should_Evaluate_Function_Only_Once_Issue_107()
     {
@@ -75,7 +74,7 @@ public class EventHandlersTests
 
         void Expression_EvaluateFunction(string name, FunctionArgs args)
         {
-            if (name != "MyFunc") 
+            if (name != "MyFunc")
                 return;
             args.Result = 1;
             counter++;
@@ -84,7 +83,7 @@ public class EventHandlersTests
 
         Assert.Equal(10, totalCounter);
     }
-    
+
     [Fact]
     public void ShouldOverrideExistingFunctions()
     {
@@ -100,27 +99,7 @@ public class EventHandlersTests
 
         Assert.Equal(3, e.Evaluate());
     }
-    
-    [Fact]
-    public void ShouldEvaluateArrayParameters()
-    {
-        var e = new Expression("x * x", ExpressionOptions.IterateParameters)
-        {
-            Parameters =
-            {
-                ["x"] = new [] { 0, 1, 2, 3, 4 }
-            }
-        };
 
-        var result = (IList)e.Evaluate();
-
-        Assert.Equal(0, result[0]);
-        Assert.Equal(1, result[1]);
-        Assert.Equal(4, result[2]);
-        Assert.Equal(9, result[3]);
-        Assert.Equal(16, result[4]);
-    }
-    
     [Fact]
     public void ShouldHandleCustomParametersWhenNoSpecificParameterIsDefined()
     {
@@ -206,4 +185,99 @@ public class EventHandlersTests
 
         Assert.Null(e.Evaluate());
     }
+
+
+    [Theory]
+    [InlineData("notExistingfunction")]
+    [InlineData("andDoThis")]
+    public void ShouldTreatOperatorsWithoutWhitespaceAsFunctionName(string functionName)
+    {
+        var expression = new Expression($"{functionName}(3.14)");
+        expression.EvaluateFunction += (name, args) =>
+        {
+            if (name.Equals(functionName, StringComparison.OrdinalIgnoreCase))
+                args.Result = 1;
+        };
+
+        Assert.Equal(1, expression.Evaluate());
+    }
+
+
+    [Fact]
+    public void ExpressionShouldEvaluateCustomFunctionsWithSameName()
+    {
+        var e = new Expression("SecretOperation(3, 6) + SecretOperation(1, 2)");
+
+
+        var d = new Dictionary<string, int>();
+
+        e.EvaluateFunction += (name, args) =>
+        {
+            var id = args.Id.ToString();
+            if (name == "SecretOperation")
+            {
+                if (id != null)
+                {
+                    if (!d.ContainsKey(id))
+                    {
+                        d[id] = 3;
+                    }
+                    else
+                    {
+                        d[id]--;
+                    }
+                }
+
+                args.Result = (int)args.Parameters[0].Evaluate() + (int)args.Parameters[1].Evaluate();
+            }
+        };
+
+        Assert.Equal(12, e.Evaluate());
+        Assert.Equal(12, e.Evaluate());
+        
+        Assert.Equal(2, d.FirstOrDefault().Value);
+    }
+
+    [Fact]
+    public void ExpressionShouldEvaluateCustomFunctionsWithEffects()
+    {
+        var e = new Expression("Repeat([value] > 10, 3)");
+
+        var times = new Dictionary<string, int>();
+
+        e.EvaluateFunction += (name, args) =>
+        {
+            var id = name;
+            if (name == "Repeat")
+            {
+                var t = (int)args.Parameters[1].Evaluate() - 1;
+                var r = (bool)args.Parameters[0].Evaluate();
+                if (r && id != null)
+                {
+                    if (!times.ContainsKey(id))
+                    {
+                        times[id] = t;
+                    }
+                    else
+                    {
+                        times[id]--;
+                    }
+                }
+
+                args.Result =  r && times[id] == 0;
+            }
+        };
+        e.Parameters["value"] = 9;
+
+        Assert.Equal(false, e.Evaluate());
+        
+        e.Parameters["value"] = 11;
+        Assert.Equal(false, e.Evaluate());
+        e.Parameters["value"] = 12;
+        Assert.Equal(false, e.Evaluate()); 
+        e.Parameters["value"] = 13;
+        Assert.Equal(true, e.Evaluate()); 
+        Assert.Single(times);
+    }
+
 }

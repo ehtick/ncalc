@@ -6,24 +6,15 @@ public class ParameterExtractionTests
     [Fact]
     public void Should_Get_Parameters_Issue_103()
     {
-        var expression = new Expression("PageState == 'LIST' && a == 1 && customFunction() == true || in(1 + 1, 1, 2, 3)", ExpressionOptions.CaseInsensitiveComparer)
+        var expression = new Expression("PageState == 'LIST' && a == 1 && customFunction() == true || in(1 + 1, 1, 2, 3)", ExpressionOptions.CaseInsensitiveStringComparer)
         {
             Parameters =
             {
                 ["a"] = 1
             }
         };
-        expression.EvaluateParameter += (name, args) =>
-        {
-            if (name == "PageState")
-                args.Result = "List";
-        };
-        
-        expression.EvaluateFunction += (name, args) =>
-        {
-            if (name == "customfunction")
-                args.Result = "true";
-        };
+        expression.DynamicParameters["PageState"] = _ => "List";
+        expression.Functions["customfunction"] = _ => true;
 
         var parameters = expression.GetParametersNames();
         Assert.Contains("a", parameters);
@@ -36,9 +27,17 @@ public class ParameterExtractionTests
     {
         var expression =
             new Expression("if(x=0,x,y)",
-                ExpressionOptions.CaseInsensitiveComparer);
+                ExpressionOptions.CaseInsensitiveStringComparer);
         var parameters = expression.GetParametersNames();
         
         Assert.Equal(2,parameters.Count);
+    }
+
+    [Fact]
+    public void Should_Get_Parameters_With_Unary()
+    {
+        var expression = new Expression("-0.68");
+        var p = expression.GetParametersNames();
+        Assert.Empty(p);
     }
 }

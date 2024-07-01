@@ -2,9 +2,10 @@
 using NCalc.Cache;
 using NCalc.DependencyInjection;
 using NCalc.Domain;
+using NCalc.Exceptions;
 using NCalc.Factories;
 using NCalc.Handlers;
-using NCalc.Visitors;
+using NCalc.Services;
 
 namespace NCalc.Tests;
 
@@ -23,10 +24,10 @@ public class ServiceCollectionExtensionsTests
         Assert.NotNull(serviceProvider.GetService<IExpressionFactory>());
         Assert.NotNull(serviceProvider.GetService<ILogicalExpressionCache>());
         Assert.NotNull(serviceProvider.GetService<ILogicalExpressionFactory>());
-        Assert.NotNull(serviceProvider.GetService<IEvaluationVisitor>());
-        Assert.NotNull(serviceProvider.GetService<IParameterExtractionVisitor>());
+        Assert.NotNull(serviceProvider.GetService<IEvaluationService>());
+        Assert.NotNull(serviceProvider.GetService<IAsyncEvaluationService>());
     }
-    
+
     [Fact]
     public void WithExpressionFactory_ShouldReplaceExpressionFactory()
     {
@@ -71,141 +72,85 @@ public class ServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void WithEvaluationVisitor_ShouldReplaceEvaluationVisitor()
+    public void WithEvaluationService_ShouldReplaceEvaluationService()
     {
         var services = new ServiceCollection();
 
         services.AddNCalc()
-            .WithEvaluationVisitor<CustomEvaluationVisitor>();
+            .WithEvaluationService<CustomEvaluationService>();
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var visitor = serviceProvider.GetService<IEvaluationVisitor>();
+        var visitor = serviceProvider.GetService<IEvaluationService>();
         var expFactory = serviceProvider.GetRequiredService<IExpressionFactory>();
 
         var exp = expFactory.Create("1+1");
         Assert.Equal(42, exp.Evaluate());
-        Assert.IsType<CustomEvaluationVisitor>(visitor);
+        Assert.IsType<CustomEvaluationService>(visitor);
     }
 
     [Fact]
-    public void WithParameterExtractionVisitor_ShouldReplaceParameterExtractionVisitor()
+    public async Task WithAsyncEvaluationService_ShouldReplaceEvaluationService()
     {
         var services = new ServiceCollection();
 
         services.AddNCalc()
-            .WithParameterExtractionVisitor<CustomParameterExtractionVisitor>();
+            .WithAsyncEvaluationService<CustomAsyncEvaluationService>();
 
         var serviceProvider = services.BuildServiceProvider();
 
-        var visitor = serviceProvider.GetService<IParameterExtractionVisitor>();
-        Assert.IsType<CustomParameterExtractionVisitor>(visitor);
+        var visitor = serviceProvider.GetService<IAsyncEvaluationService>();
+        var expFactory = serviceProvider.GetRequiredService<IAsyncExpressionFactory>();
+
+        var exp = expFactory.Create("1+1");
+        Assert.Equal(42, await exp.EvaluateAsync());
+        Assert.IsType<CustomAsyncEvaluationService>(visitor);
     }
 
     #region Custom Implementations Stubs
 
     private class CustomExpressionFactory : IExpressionFactory
     {
-        public Expression Create(string expression, ExpressionContext expressionContext = null) => throw new NotImplementedException();
+        public Expression Create(string expression, ExpressionContext expressionContext = null) => throw new NCalcException("Stub method intented for testing.");
 
-        public Expression Create(LogicalExpression logicalExpression, ExpressionContext expressionContext = null) => throw new NotImplementedException();
+        public Expression Create(LogicalExpression logicalExpression, ExpressionContext expressionContext = null) => throw new NCalcException("Stub method intented for testing.");
     }
-    
+
     private class CustomCache : ILogicalExpressionCache
     {
-        public bool TryGetValue(string expression, out LogicalExpression logicalExpression) =>
-            throw new NotImplementedException();
+        public bool TryGetValue(string expression, out LogicalExpression logicalExpression) => throw new NCalcException("Stub method intented for testing.");
+
 
         public void Set(string expression, LogicalExpression logicalExpression)
         {
-            throw new NotImplementedException();
         }
     }
 
     private class CustomLogicalExpressionFactory : ILogicalExpressionFactory
     {
-        public LogicalExpression Create(string expression,ExpressionContext context) =>
-            throw new NotImplementedException();
+        public LogicalExpression Create(string expression, LogicalExpressionOptions options) => throw new NCalcException("Stub method intented for testing.");
     }
 
-    private class CustomEvaluationVisitor : IEvaluationVisitor
+    private class CustomEvaluationService : IEvaluationService
     {
-        public void Visit(TernaryExpression expression)
-        {
-
-        }
-
-        public void Visit(BinaryExpression expression)
-        {
-
-        }
-
-        public void Visit(UnaryExpression expression)
-        {
-
-        }
-
-        public void Visit(ValueExpression expression)
-        {
-
-        }
-
-        public void Visit(Function function)
-        {
-
-        }
-
-        public void Visit(Identifier identifier)
-        {
-
-        }
-
         public event EvaluateFunctionHandler EvaluateFunction;
         public event EvaluateParameterHandler EvaluateParameter;
-        public ExpressionContext Context { get; set; }
-        public Dictionary<string, object> Parameters { get; set; }
-        public object Result => 42;
+
+        public object Evaluate(LogicalExpression expression, ExpressionContext context)
+        {
+            return 42;
+        }
     }
 
-    private class CustomParameterExtractionVisitor : IParameterExtractionVisitor
+    private class CustomAsyncEvaluationService : IAsyncEvaluationService
     {
-        public void Visit(LogicalExpression expression)
-        {
-            throw new NotImplementedException();
-        }
+        public event AsyncEvaluateFunctionHandler EvaluateFunctionAsync;
+        public event AsyncEvaluateParameterHandler EvaluateParameterAsync;
 
-        public void Visit(TernaryExpression expression)
+        public Task<object> EvaluateAsync(LogicalExpression expression, AsyncExpressionContext context)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<object>(42);
         }
-
-        public void Visit(BinaryExpression expression)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Visit(UnaryExpression expression)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Visit(ValueExpression expression)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Visit(Function function)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void Visit(Identifier identifier)
-        {
-            throw new NotImplementedException();
-        }
-
-        public List<string> Parameters { get; }
     }
-
     #endregion
 }

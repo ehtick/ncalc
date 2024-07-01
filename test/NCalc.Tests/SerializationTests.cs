@@ -1,5 +1,6 @@
 using NCalc.Domain;
 using NCalc.Factories;
+using NCalc.Tests.TestData;
 using Newtonsoft.Json;
 
 namespace NCalc.Tests;
@@ -8,15 +9,10 @@ namespace NCalc.Tests;
 public class SerializationTests
 {
     [Theory]
-    [InlineData("(waterlevel > 1 AND waterlevel <= 3)", false, 3.2)]
-    [InlineData("(waterlevel > 3 AND waterlevel <= 5)", true, 3.2)]
-    [InlineData("(waterlevel > 1 AND waterlevel <= 3)", false, 3.1)]
-    [InlineData("(waterlevel > 3 AND waterlevel <= 5)", true, 3.1)]
-    [InlineData("(3 < waterlevel AND 5 >= waterlevel)", true, 3.1)]
-    [InlineData("(3.2 < waterlevel AND 5.3 >= waterlevel)", true, 4)]
-    public void SerializeAndDeserialize_ShouldWork(string expression, bool expected, double inputValue)
+    [ClassData(typeof(WaterLevelCheckTestData))]
+    public void SerializeAndDeserializeShouldWork(string expression, bool expected, double inputValue)
     {
-        var compiled = LogicalExpressionFactory.Create(expression, ExpressionOptions.NoCache);
+        var compiled = LogicalExpressionFactory.Create(expression);
         var serialized = JsonConvert.SerializeObject(compiled, new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All // We need this to allow serializing abstract classes
@@ -31,7 +27,7 @@ public class SerializationTests
 
         var exp = new Expression(deserialized)
         {
-            Parameters = new Dictionary<string, object>
+            Parameters = 
             {
                 { "waterlevel", inputValue }
             }

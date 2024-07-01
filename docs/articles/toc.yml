@@ -8,12 +8,20 @@
   href: values.md
 - name: Parameters
   href: parameters.md
+- name: Expression Context
+  href: expression_context.md
 - name: Handling Errors
   href: handling_errors.md
 - name: Case Sensitivity
   href: case_sensitivity.md
+- name: Overflow Protection
+  href: overflow_protection.md
+- name: Async Support
+  href: async.md
 - name: Caching
   href: caching.md
+- name: Lambda Compilation
+  href: lambda_compilation.md
 - name: Dependency Injection
   href: dependency_injection.md
 - name: Plugins
@@ -22,5 +30,11 @@
       href: plugins/antlr.md
     - name: Memory Cache
       href: plugins/memory_cache.md
+- name: Architecture
+  href: architecture.md
+- name: Benchmarks
+  href: benchmarks.md
+- name: Changelog
+  href: changelog.md
 - name: Publishing a New Release
   href: new_release.md

@@ -1,3 +1,61 @@
+# 5.0.0
+* Overflow protection by @Bykiev in https://github.com/ncalc/ncalc/pull/256
+* Consolidate NETStandard.Library package version by @Bykiev in https://github.com/ncalc/ncalc/pull/257
+* Add OverflowProtection to `LambdaExpressionVisitor` by @gumbarros in https://github.com/ncalc/ncalc/pull/259
+* Improve CI with `DOTNET_NOLOGO` and `DOTNET_CLI_TELEMETRY_OPTOUT` by @gumbarros in https://github.com/ncalc/ncalc/pull/260
+* Fix treating an expression with whitespace in fractional part as valid by @Bykiev in https://github.com/ncalc/ncalc/pull/262
+* Added `IDictionary<string,ExpressionFunction>` and `IDictionary<string,ExpressionParameter>` support by @gumbarros in https://github.com/ncalc/ncalc/pull/254
+* Use decimal with exponentiation when DecimalAsDefault is used by @Bykiev in https://github.com/ncalc/ncalc/pull/269
+* Add NOTRACE for the entire solution at Release by @gumbarros in https://github.com/ncalc/ncalc/pull/268
+* Fix `AsyncFunctionArgs` regression by @gumbarros in https://github.com/ncalc/ncalc/pull/271
+* Added `Id` property to `Identifier` by @gumbarros in https://github.com/ncalc/ncalc/pull/266
+* Visitor pattern is now stateless with generics by @gumbarros in https://github.com/ncalc/ncalc/pull/272
+
+## Breaking Changes
+- `NCalcAsync` now uses `AsyncExpressionContext`
+- `ExpressionContext` is now a `record` instead of a `class`, allowing support for shallow cloning
+- `IEvaluationVisitor` is removed, please use `IEvaluationService` for an easier to implement interface
+- `ILogicalExpressionVisitor` is now `ILogicalExpressionVisitor<T>`, where `<T>` is the return of the visitor
+- `IAsyncLogicalExpressionVisitor` is removed, please use `ILogicalExpressionVisitor<Task<object?>>`
+- `AdvancedExpression` and `AsyncAdvancedExpression` are removed, please use the respective constructors at `Expression` and `AsyncExpression` to prevent unnecessary casting.
+
+# 4.3.3
+* Add `MemberNotNullWhen` attribute to `HasErrors` by @gmcchessney in https://github.com/ncalc/ncalc/pull/250
+* Fix tests by @Bykiev in https://github.com/ncalc/ncalc/pull/251
+* Fix parsing fractional zero by @Bykiev in https://github.com/ncalc/ncalc/pull/253
+* Refactor MathHelper by @Bykiev in https://github.com/ncalc/ncalc/pull/255
+
+# 4.3.2
+* Fix handling new lines in expression by @Bykiev in https://github.com/ncalc/ncalc/pull/234
+* Add support UInt64 for binary operators by @Bykiev in https://github.com/ncalc/ncalc/pull/237
+* Fix parsing expression by @Bykiev in https://github.com/ncalc/ncalc/pull/241
+* Re-added `HasErrors` method to `NCalc.Async` by @gumbarros in https://github.com/ncalc/ncalc/pull/245
+* Require braces to be closed by a brace of the same type by @gumbarros in https://github.com/ncalc/ncalc/pull/246
+* Make unclosed brace cause a parsing exception by @gmcchessney in https://github.com/ncalc/ncalc/pull/243
+
+# 4.3.1
+* Fix handling new lines in expression by @Bykiev in https://github.com/ncalc/ncalc/pull/234
+
+# 4.3.0
+* Added `async` support by @gumbarros in https://github.com/ncalc/ncalc/pull/207
+* Remove unused Parlot rule by @Bykiev in https://github.com/ncalc/ncalc/pull/221
+* Inline `TypeHelper.IsReal` by @gumbarros in https://github.com/ncalc/ncalc/pull/225
+* Allow whitespace at end of expression by @gumbarros and @Bykiev in https://github.com/ncalc/ncalc/pull/224
+* Re-added Benchmark project by @gumbarros in https://github.com/ncalc/ncalc/pull/220
+* Run Benchmark at CI by @gumbarros in https://github.com/ncalc/ncalc/pull/228
+* Fixed not operator behavior by @gumbarros and @Bykiev in https://github.com/ncalc/ncalc/pull/227
+
+## Breaking Changes
+* `Expression` is now `AsyncExpression` at `NCalcAsync`, related classes are also prefixed with Async to prevent naming collisions
+* Removed obsolete `HasOption` extension method from `ExpressionOptions`, please use `HasFlag`
+* Removed obsolete `CaseInsensitiveComparer` enum member, please use `CaseInsensitiveStringComparer`
+
+# 4.2.1
+* [Fix treating NOT as unary in function name](https://github.com/ncalc/ncalc/pull/211) by [Andrey Bykiev](https://github.com/Bykiev)
+* [Fix GetParametersNames() method inifinte loop with unary operators](https://github.com/ncalc/ncalc/pull/212) by [Andrey Bykiev](https://github.com/Bykiev)
+* [Fix parsing floating-point numbers](https://github.com/ncalc/ncalc/pull/215) by [Andrey Bykiev](https://github.com/Bykiev)
+* [Fix handling invalid expression with comma](https://github.com/ncalc/ncalc/pull/217) by [Sébastien Ros](https://github.com/sebastienros), [Andrey Bykiev](https://github.com/Bykiev)
+
 # 4.2
 * [Improve Parlot error handling](https://github.com/ncalc/ncalc/pull/181) by [Andrey Bykiev](https://github.com/Bykiev)
 * [Fix OverflowException with double values](https://github.com/ncalc/ncalc/pull/188) by [Andrey Bykiev](https://github.com/Bykiev), [Gustavo Mauricio de Barros](https://github.com/gumbarros)
