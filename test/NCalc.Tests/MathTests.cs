@@ -542,7 +542,32 @@ public class MathsTests
         var exp = new Expression("10000000.1*1000", ExpressionOptions.LongAsDefault, CultureInfo.InvariantCulture);
         var result = exp.Evaluate(TestContext.Current.CancellationToken);
 
-        var expected = 10000000.1 * 1000;
+        const double expected = 10000000.1 * 1000;
         Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void ShouldAddWithParenthesis()
+    {
+        var expression = new Expression("(500 * {ml500}) + (250 * {ml250}) + (120 * {ml120}) + (60 * {ml60}) + (30 * {ml30}) + (10 * {ml10}) + (1 * {ml1}) + (0.5 * {ml05})");
+
+        var parameters = new Dictionary<string, object>
+        {
+            ["ml500"] = 2,
+            ["ml250"] = 0,
+            ["ml120"] = 1,
+            ["ml60"] = 0,
+            ["ml30"] = 3,
+            ["ml10"] = 0,
+            ["ml1"] = 10,
+            ["ml05"] = 4
+        };
+        expression.Parameters = parameters;
+
+        var result = expression.Evaluate()!;
+
+        const double expected = (2 * 500) + (1 * 120) + (3 * 30) + (10 * 1) + (4 * 0.5);
+
+        Assert.Equal(expected, Convert.ToDouble(result));
     }
 }
