@@ -9,6 +9,26 @@ namespace NCalc.Helpers;
 /// </summary>
 public static class EvaluationHelper<TExpressionContext> where TExpressionContext : ExpressionContextBase
 {
+    private static (object? Left, object? Right) ArithmeticNullOrEmptyStringAsZero(object? leftValue, object? rightValue, TExpressionContext context)
+    {
+        if (!context.Options.HasFlag(ExpressionOptions.ArithmeticNullOrEmptyStringAsZero))
+            return (leftValue, rightValue);
+
+        var leftIsNullOrEmptyString = leftValue == null || leftValue is string leftString && string.IsNullOrEmpty(leftString);
+        var rightIsNullOrEmptyString = rightValue == null || rightValue is string rightString && string.IsNullOrEmpty(rightString);
+
+        if (leftIsNullOrEmptyString ^ rightIsNullOrEmptyString)
+        {
+            if (leftIsNullOrEmptyString)
+                leftValue = 0;
+
+            if (rightIsNullOrEmptyString)
+                rightValue = 0;
+        }
+
+        return (leftValue, rightValue);
+    }
+
     /// <summary>
     /// Adds two values, with special handling for string concatenation based on the context options.
     /// </summary>
@@ -22,6 +42,8 @@ public static class EvaluationHelper<TExpressionContext> where TExpressionContex
             return string.Concat(
                 Convert.ToString(leftValue, context.CultureInfo),
                 Convert.ToString(rightValue, context.CultureInfo));
+
+        (leftValue, rightValue) = ArithmeticNullOrEmptyStringAsZero(leftValue, rightValue, context);
 
         if (context.Options.HasFlag(ExpressionOptions.NoStringTypeCoercion) &&
             (leftValue is string || rightValue is string))
@@ -39,6 +61,30 @@ public static class EvaluationHelper<TExpressionContext> where TExpressionContex
                 Convert.ToString(leftValue, context.CultureInfo),
                 Convert.ToString(rightValue, context.CultureInfo));
         }
+    }
+
+    public static object? Minus(object? leftValue, object? rightValue, TExpressionContext context)
+    {
+        (leftValue, rightValue) = ArithmeticNullOrEmptyStringAsZero(leftValue, rightValue, context);
+        return MathHelper.Subtract(leftValue, rightValue, context);
+    }
+
+    public static object? Times(object? leftValue, object? rightValue, TExpressionContext context)
+    {
+        (leftValue, rightValue) = ArithmeticNullOrEmptyStringAsZero(leftValue, rightValue, context);
+        return MathHelper.Multiply(leftValue, rightValue, context);
+    }
+
+    public static object? Div(object? leftValue, object? rightValue, TExpressionContext context)
+    {
+        (leftValue, rightValue) = ArithmeticNullOrEmptyStringAsZero(leftValue, rightValue, context);
+        return MathHelper.Divide(leftValue, rightValue, context);
+    }
+
+    public static object? Modulo(object? leftValue, object? rightValue, TExpressionContext context)
+    {
+        (leftValue, rightValue) = ArithmeticNullOrEmptyStringAsZero(leftValue, rightValue, context);
+        return MathHelper.Modulo(leftValue, rightValue, context);
     }
 
     /// <summary>

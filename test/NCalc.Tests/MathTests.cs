@@ -439,6 +439,31 @@ public class MathsTests
             .Evaluate(TestContext.Current.CancellationToken));
     }
 
+    [Theory]
+    [InlineData("1 + ''", 1)]
+    [InlineData("'' + 1", 1)]
+    [InlineData("1 + null", 1)]
+    [InlineData("null + 1", 1)]
+    [InlineData("1 - ''", 1)]
+    [InlineData("'' - 1", -1)]
+    [InlineData("1 - null", 1)]
+    [InlineData("null - 1", -1)]
+    [InlineData("2 * ''", 0)]
+    [InlineData("'' * 2", 0)]
+    [InlineData("2 * null", 0)]
+    [InlineData("null * 2", 0)]
+    [InlineData("'' / 2", 0d)]
+    [InlineData("null / 2", 0d)]
+    [InlineData("'' % 2", 0)]
+    [InlineData("null % 2", 0)]
+    public void ShouldUseArithmeticNullOrEmptyStringAsZero(string expressionString, object expected)
+    {
+        const ExpressionOptions options = ExpressionOptions.ArithmeticNullOrEmptyStringAsZero | ExpressionOptions.AllowNullParameter | ExpressionOptions.NoCache;
+        var expression = new Expression(expressionString, options);
+
+        Assert.Expression(expected, expression);
+    }
+
     [Fact]
     public void DivideNullShouldBeNull()
     {
