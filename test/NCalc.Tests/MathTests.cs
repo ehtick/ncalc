@@ -456,6 +456,7 @@ public class MathsTests
     [InlineData("null / 2", 0d)]
     [InlineData("'' % 2", 0)]
     [InlineData("null % 2", 0)]
+    [InlineData("'' + ''", 0)]
     public void ShouldUseArithmeticNullOrEmptyStringAsZero(string expressionString, object expected)
     {
         const ExpressionOptions options = ExpressionOptions.ArithmeticNullOrEmptyStringAsZero | ExpressionOptions.AllowNullParameter | ExpressionOptions.NoCache;

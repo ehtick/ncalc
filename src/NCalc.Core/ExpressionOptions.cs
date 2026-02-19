@@ -92,7 +92,7 @@ public enum ExpressionOptions
     LongAsDefault = 1 << 16,
 
     /// <summary>
-    /// Coalesces null or empty string values to 0 during arithmetic operations.
+    /// Converts null or empty string values to 0 during arithmetic operations.
     /// </summary>
     ArithmeticNullOrEmptyStringAsZero = 1 << 17
 }
