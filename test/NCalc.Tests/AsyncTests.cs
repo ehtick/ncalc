@@ -1,4 +1,6 @@
-﻿using NCalc.Factories;
+﻿using NCalc.Exceptions;
+using NCalc.Factories;
+using NCalc.Parser;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace NCalc.Tests;
@@ -27,8 +29,8 @@ public class AsyncTests
             return "FOO";
         };
 
-        var result = await expression.EvaluateAsync(CancellationToken.None);
-        await Assert.That(result).IsEqualTo(true);
+        var result = await expression.EvaluateAsync<bool>(CancellationToken.None);
+        await Assert.That(result).IsTrue();
     }
 
     [Test]
@@ -112,6 +114,114 @@ public class AsyncTests
     }
 
     [Test]
+    public async Task ShouldEvaluateAsyncParameterDictionary()
+    {
+        var expression = new Expression("(a + b) == 'Leo'")
+        {
+            Parameters =
+            {
+                ["b"] = new Expression("'eo'")
+            }
+        };
+
+        expression.AsyncParameters["a"] = async args =>
+        {
+            await Task.Delay(1, args.CancellationToken);
+            return "L";
+        };
+
+        var result = (bool?)await expression.EvaluateAsync(CancellationToken.None);
+        await Assert.That(result).IsTrue();
+    }
+
+    [Test]
+    public async Task ShouldIgnoreAsyncParameterHandlerAndDictionaryDuringSyncEvaluation()
+    {
+        var expression = new Expression("x");
+        var asyncHandlerCalled = false;
+        var asyncDictionaryCalled = false;
+
+        expression.EvaluateAsyncParameter += (_, _) =>
+        {
+            asyncHandlerCalled = true;
+            return Task.CompletedTask;
+        };
+
+        expression.AsyncParameters["x"] = _ =>
+        {
+            asyncDictionaryCalled = true;
+            return Task.FromResult((object)1);
+        };
+
+        await Assert.That(() => expression.Evaluate(CancellationToken.None))
+            .Throws<NCalcParameterNotDefinedException>();
+        await Assert.That(asyncHandlerCalled).IsFalse();
+        await Assert.That(asyncDictionaryCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task ShouldPreferSyncParameterHandlerOverAsyncParameterHandler()
+    {
+        var expression = new Expression("x");
+        var asyncHandlerCalled = false;
+
+        expression.EvaluateParameter += (_, args) => args.Result = 1;
+        expression.EvaluateAsyncParameter += (_, _) =>
+        {
+            asyncHandlerCalled = true;
+            return Task.CompletedTask;
+        };
+
+        var result = await expression.EvaluateAsync(CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(asyncHandlerCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task ShouldPreferSyncParameterDictionaryOverAsyncParameterDictionary()
+    {
+        var expression = new Expression("x");
+        var asyncDictionaryCalled = false;
+
+        expression.DynamicParameters["x"] = _ => 1;
+        expression.AsyncParameters["x"] = _ =>
+        {
+            asyncDictionaryCalled = true;
+            return Task.FromResult((object)2);
+        };
+
+        var result = await expression.EvaluateAsync(CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(1);
+        await Assert.That(asyncDictionaryCalled).IsFalse();
+    }
+
+    [Test]
+    public async Task ShouldShareAsyncParametersWithNestedExpressions()
+    {
+        var expression = new Expression("outer")
+        {
+            Parameters =
+            {
+                ["outer"] = new Expression("inner")
+            },
+            AsyncParameters =
+            {
+                ["inner"] = async args =>
+                {
+                    await Task.Delay(1, args.CancellationToken);
+                    return 69;
+                }
+            }
+        };
+
+        var result = await expression.EvaluateAsync(CancellationToken.None);
+
+        await Assert.That(result).IsEqualTo(69);
+    }
+
+    [Test]
     public async Task ShouldEvaluateAsyncBinaryHandler()
     {
         var expression = new Expression("1 + 2");
@@ -188,6 +298,28 @@ public class AsyncTests
         await Assert.That(result[2]).IsEqualTo(4);
         await Assert.That(result[3]).IsEqualTo(9);
         await Assert.That(result[4]).IsEqualTo(16);
+    }
+
+    [Test]
+    public async Task ShouldEvaluateIfFalseBranchWhenIteratedConditionComparesNaNAsync()
+    {
+        var logicalExpression = LogicalExpressionParser.Parse(new LogicalExpressionParserContext(
+            "if((A - B) < 1; 0; (A - B))",
+            new LogicalExpressionParserOptions { ArgumentSeparator = LogicalExpressionArgumentSeparator.Semicolon }));
+        var expression = new Expression(logicalExpression, ExpressionOptions.IterateParameters)
+        {
+            Parameters =
+            {
+                ["A"] = new[] { double.NaN },
+                ["B"] = new[] { double.NaN }
+            }
+        };
+
+        var result = await expression.EvaluateAsync<IList<object>>(CancellationToken.None);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result.Count).IsEqualTo(1);
+        await Assert.That(double.IsNaN((double)result[0])).IsTrue();
     }
 
     [Test]
@@ -318,9 +450,9 @@ public class AsyncTests
             {
                 ["amount"] = double.NaN
             }
-        }.EvaluateAsync(CancellationToken.None)).IsEqualTo(false);
-        await Assert.That(await expression.EvaluateAsync(CancellationToken.None)).IsEqualTo(true);
-        await Assert.That(await new Expression("(0.0 / 0.0) == (0.0 / 0.0)").EvaluateAsync(CancellationToken.None))
-            .IsEqualTo(false);
+        }.EvaluateAsync<bool>(CancellationToken.None)).IsFalse();
+        await Assert.That(await expression.EvaluateAsync<bool>(CancellationToken.None)).IsTrue();
+        await Assert.That(await new Expression("(0.0 / 0.0) == (0.0 / 0.0)").EvaluateAsync<bool>(CancellationToken.None))
+            .IsFalse();
     }
 }

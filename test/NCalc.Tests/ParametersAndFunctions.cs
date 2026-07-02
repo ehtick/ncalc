@@ -12,12 +12,13 @@ public class ParametersAndFunctions
             new Dictionary<string, object> { ["staticValue"] = 1 },
             new Dictionary<string, ExpressionParameter> { ["dynamicValue"] = _ => 2 },
             new Dictionary<string, ExpressionFunction> { ["Custom"] = _ => 3 },
-            new Dictionary<string, AsyncExpressionFunction> { ["AsyncCustom"] = async _ => await Task.FromResult(4) });
+            new Dictionary<string, AsyncExpressionFunction> { ["AsyncCustom"] = async _ => await Task.FromResult(4) },
+            new Dictionary<string, AsyncExpressionParameter> { ["asyncDynamicValue"] = async _ => await Task.FromResult((object)5) });
 
-        var expression = new Expression("staticValue + dynamicValue + Custom() + AsyncCustom()", context);
+        var expression = new Expression("staticValue + dynamicValue + asyncDynamicValue + Custom() + AsyncCustom()", context);
         var result = await expression.EvaluateAsync(CancellationToken.None);
 
-        await Assert.That(result).IsEqualTo(10);
+        await Assert.That(result).IsEqualTo(15);
     }
 
     [Test]
@@ -157,14 +158,14 @@ public class ParametersAndFunctions
         };
         e.Parameters["value"] = 9;
 
-        await Assert.That(e).Expression().IsEqualTo(false);
+        await Assert.That(e).Expression<bool>().IsFalse();
 
         e.Parameters["value"] = 11;
-        await Assert.That(e).Expression().IsEqualTo(false);
+        await Assert.That(e).Expression<bool>().IsFalse();
         e.Parameters["value"] = 12;
-        await Assert.That(e).Expression().IsEqualTo(false);
+        await Assert.That(e).Expression<bool>().IsFalse();
         e.Parameters["value"] = 13;
-        await Assert.That(e).Expression().IsEqualTo(true);
+        await Assert.That(e).Expression<bool>().IsTrue();
         await Assert.That(times).HasSingleItem();
     }
 
@@ -288,7 +289,10 @@ public class ParametersAndFunctions
             { "Name", "Beatriz" }
         };
 
-        await Assert.That("name == 'Beatriz'").Expression(parameters).IsEqualTo(true);
+        await Assert.That("name == 'Beatriz'").Expression<bool>(new ExpressionContext
+        {
+            StaticParameters = parameters
+        }).IsTrue();
     }
 
     [Test]

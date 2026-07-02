@@ -22,6 +22,12 @@ public class Expression
         set => Context.DynamicParameters = value;
     }
 
+    public IDictionary<string, AsyncExpressionParameter> AsyncParameters
+    {
+        get => Context.AsyncParameters;
+        set => Context.AsyncParameters = value;
+    }
+
     public IDictionary<string, ExpressionFunction> Functions
     {
         get => Context.Functions;
@@ -78,6 +84,15 @@ public class Expression
         remove => Context.EvaluateParameterHandler -= value;
     }
 
+    /// <summary>
+    /// Event triggered to handle async parameter evaluation.
+    /// </summary>
+    public event EvaluateAsyncParameterHandler EvaluateAsyncParameter
+    {
+        add => Context.EvaluateAsyncParameterHandler += value;
+        remove => Context.EvaluateAsyncParameterHandler -= value;
+    }
+
     protected ExpressionContext Context { get; }
 
     /// <summary>
@@ -116,39 +131,43 @@ public class Expression
     public Exception? Error { get; private set; }
     private ILogicalExpressionCache LogicalExpressionCache { get; }
     private ILogicalExpressionFactory LogicalExpressionFactory { get; }
+    protected internal IEvaluationVisitorFactory? EvaluationVisitorFactory { get; private set; }
 
-    protected Expression(ExpressionContext? context = null)
+    protected Expression(ExpressionContext? context = null, IEvaluationVisitorFactory? evaluationVisitorFactory = null)
     {
         LogicalExpressionCache = Cache.LogicalExpressionCache.GetInstance();
         LogicalExpressionFactory = Factories.LogicalExpressionFactory.GetInstance();
         Context = context ?? new ExpressionContext();
+        EvaluationVisitorFactory = evaluationVisitorFactory;
     }
 
     public Expression(
         string expressionString,
         ExpressionContext context,
         ILogicalExpressionFactory logicalExpressionFactory,
-        ILogicalExpressionCache logicalExpressionCache)
+        ILogicalExpressionCache logicalExpressionCache,
+        IEvaluationVisitorFactory? evaluationVisitorFactory = null)
+        : this(context, evaluationVisitorFactory)
     {
         ExpressionString = expressionString;
         LogicalExpressionCache = logicalExpressionCache;
         LogicalExpressionFactory = logicalExpressionFactory;
-        Context = context;
     }
 
     public Expression(
         LogicalExpression logicalExpression,
         ExpressionContext context,
         ILogicalExpressionFactory logicalExpressionFactory,
-        ILogicalExpressionCache logicalExpressionCache)
+        ILogicalExpressionCache logicalExpressionCache,
+        IEvaluationVisitorFactory? evaluationVisitorFactory = null)
+        : this(context, evaluationVisitorFactory)
     {
         LogicalExpression = logicalExpression;
         LogicalExpressionCache = logicalExpressionCache;
         LogicalExpressionFactory = logicalExpressionFactory;
-        Context = context;
     }
 
-    public Expression(string? expression, ExpressionContext? context = null) : this(context)
+    public Expression(string? expression, ExpressionContext? context = null, IEvaluationVisitorFactory? evaluationVisitorFactory = null) : this(context, evaluationVisitorFactory)
     {
         ExpressionString = expression;
     }
@@ -160,11 +179,12 @@ public class Expression
     }
 
     public Expression(string? expression, ExpressionOptions options = ExpressionOptions.None,
-        CultureInfo? cultureInfo = null) : this(expression, new ExpressionContext(options, cultureInfo))
+        CultureInfo? cultureInfo = null,
+        IEvaluationVisitorFactory? evaluationVisitorFactory = null) : this(expression, new ExpressionContext(options, cultureInfo), evaluationVisitorFactory)
     {
     }
 
-    public Expression(LogicalExpression logicalExpression, ExpressionContext? context = null) : this(context)
+    public Expression(LogicalExpression logicalExpression, ExpressionContext? context = null, IEvaluationVisitorFactory? evaluationVisitorFactory = null) : this(context, evaluationVisitorFactory)
     {
         LogicalExpression = logicalExpression ?? throw new
             ArgumentException("Expression can't be null", nameof(logicalExpression));
@@ -177,18 +197,26 @@ public class Expression
     }
 
     public Expression(LogicalExpression logicalExpression, ExpressionOptions options = ExpressionOptions.None,
-        CultureInfo? cultureInfo = null) : this(logicalExpression, new ExpressionContext(options, cultureInfo))
+        CultureInfo? cultureInfo = null,
+        IEvaluationVisitorFactory? evaluationVisitorFactory = null) : this(logicalExpression, new ExpressionContext(options, cultureInfo), evaluationVisitorFactory)
     {
     }
 
     protected virtual EvaluationVisitor CreateEvaluationVisitor(CancellationToken cancellationToken = default)
     {
-        return new EvaluationVisitor(Context, cancellationToken);
+        return EvaluationVisitorFactory?.CreateEvaluationVisitor(Context, cancellationToken)
+               ?? new EvaluationVisitor(Context, cancellationToken: cancellationToken);
     }
 
     protected virtual AsyncEvaluationVisitor CreateAsyncEvaluationVisitor(CancellationToken cancellationToken = default)
     {
-        return new AsyncEvaluationVisitor(Context, cancellationToken);
+        return EvaluationVisitorFactory?.CreateAsyncEvaluationVisitor(Context, cancellationToken)
+               ?? new AsyncEvaluationVisitor(Context, cancellationToken: cancellationToken);
+    }
+
+    internal void SetEvaluationVisitorFactory(IEvaluationVisitorFactory? evaluationVisitorFactory)
+    {
+        EvaluationVisitorFactory ??= evaluationVisitorFactory;
     }
 
     /// <summary>
@@ -211,14 +239,64 @@ public class Expression
 
             var evaluationVisitor = CreateEvaluationVisitor(cancellationToken);
 
-            if (LogicalExpression is null)
-                return null;
-
-            return LogicalExpression.Accept(evaluationVisitor);
+            return LogicalExpression?.Accept(evaluationVisitor);
         }
         catch (InvalidCastException exception)
         {
             throw new NCalcEvaluationException("Error evaluating expression.", exception);
+        }
+    }
+
+    /// <summary>
+    /// Evaluates the logical expression and converts the result to type <typeparamref name="T"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <typeparam name="T">The type to which the evaluation result should be converted.</typeparam>
+    /// <returns>The result of the evaluation, converted to type <typeparamref name="T"/>, or <c>default</c> if the result is <c>null</c>.</returns>
+    /// <exception cref="NCalcCastException">Thrown when the result cannot be cast to type <typeparamref name="T"/>.</exception>
+    /// <exception cref="NCalcException">Thrown when there is an error in the expression.</exception>
+    public T? Evaluate<T>(CancellationToken cancellationToken = default)
+    {
+        var result = Evaluate(cancellationToken);
+
+        return CastResult<T>(result, Context.CultureInfo);
+    }
+
+    /// <summary>
+    /// Asynchronously evaluates the logical expression and converts the result to type <typeparamref name="T"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <typeparam name="T">The type to which the evaluation result should be converted.</typeparam>
+    /// <returns>A task that represents the asynchronous evaluation. The task result contains the value converted to type <typeparamref name="T"/>, or <c>default</c> if the result is <c>null</c>.</returns>
+    /// <exception cref="NCalcCastException">Thrown when the result cannot be cast to type <typeparamref name="T"/>.</exception>
+    /// <exception cref="NCalcException">Thrown when there is an error in the expression.</exception>
+    public async Task<T?> EvaluateAsync<T>(CancellationToken cancellationToken = default)
+    {
+        var result = await EvaluateAsync(cancellationToken);
+
+        return CastResult<T>(result, Context.CultureInfo);
+    }
+
+    private static T? CastResult<T>(object? result, CultureInfo cultureInfo)
+    {
+        switch (result)
+        {
+            case null:
+                return default;
+            case T typed:
+                return typed;
+        }
+
+        if (result is not IConvertible convertible)
+            throw new NCalcCastException(result, typeof(T));
+
+        try
+        {
+            return (T)Convert.ChangeType(convertible, typeof(T), cultureInfo);
+        }
+        catch (Exception exception)
+        {
+            throw new NCalcCastException(result, typeof(T), exception);
         }
     }
 
